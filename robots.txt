@@ -1,0 +1,15 @@
+# robots.txt для GitHub Pages
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://YOUR_USERNAME.github.io/mcp-code-execution-ru/sitemap.xml
+
+# Запрещаем индексацию служебных файлов
+Disallow: /.git/
+Disallow: /.github/
+
+# Разрешаем все остальное
+Allow: /index.html
+Allow: /README.md

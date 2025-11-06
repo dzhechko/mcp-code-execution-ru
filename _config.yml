@@ -1,0 +1,42 @@
+# GitHub Pages Configuration
+# Этот файл настраивает Jekyll для GitHub Pages
+
+# Основная информация
+title: "Выполнение кода с MCP | Anthropic"
+description: "Подробный транскрипт и анализ блога Anthropic о Model Context Protocol (MCP) на русском языке"
+author: "MCP Russia Community"
+lang: ru
+locale: ru_RU
+
+# URL настройки (замените YOUR_USERNAME на ваше имя пользователя GitHub)
+url: "https://YOUR_USERNAME.github.io"
+baseurl: "/mcp-code-execution-ru"
+
+# Тема (для простоты используем null, так как у нас кастомный дизайн)
+theme: null
+
+# Plugins
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# SEO настройки
+twitter:
+  card: summary_large_image
+
+social:
+  name: MCP Russia Community
+  links:
+    - https://github.com/modelcontextprotocol
+    - https://modelcontextprotocol.io
+
+# Исключения из сборки
+exclude:
+  - README.md
+  - LICENSE
+  - .gitignore
+  - .git
+
+# Включения в сборку
+include:
+  - _config.yml

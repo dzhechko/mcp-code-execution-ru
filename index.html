@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Подробный транскрипт и анализ статьи Anthropic о выполнении кода с Model Context Protocol (MCP). Узнайте, как агенты могут эффективно взаимодействовать с инструментами через код.">
+    <meta name="keywords" content="MCP, Model Context Protocol, Anthropic, Claude, AI агенты, выполнение кода, LLM, искусственный интеллект">
+    <meta name="author" content="MCP Russia Community">
+    <meta property="og:title" content="Выполнение кода с MCP | Anthropic Engineering">
+    <meta property="og:description" content="Как выполнение кода делает AI-агенты более эффективными при работе с тысячами инструментов через MCP">
+    <meta property="og:type" content="article">
+    <meta property="og:locale" content="ru_RU">
+    <title>Выполнение кода с MCP | Транскрипт блога Anthropic</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome для иконок -->
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Highlight.js для подсветки синтаксиса -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    
+    <!-- AOS для анимаций при прокрутке -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #8b5cf6;
+            --accent-color: #ec4899;
+            --dark-bg: #0f172a;
+            --darker-bg: #020617;
+            --card-bg: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border-color: #334155;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.2);
+            border-color: var(--primary-color);
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+            border-bottom: 2px dotted var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 300px;
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            text-align: left;
+            border-radius: 8px;
+            padding: 12px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .code-editor {
+            background: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .code-header {
+            background: #2d2d2d;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #404040;
+        }
+        
+        .code-tabs {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .code-tab {
+            padding: 6px 12px;
+            background: #1e1e1e;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+            color: #888;
+        }
+        
+        .code-tab.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .copy-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .copy-btn:hover {
+            background: var(--secondary-color);
+            transform: scale(1.05);
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+        }
+        
+        .comparison-table th {
+            background: var(--primary-color);
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .comparison-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .comparison-table tr:hover {
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .badge-primary {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary-color);
+        }
+        
+        .badge-success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+        
+        .badge-warning {
+            background: rgba(251, 146, 60, 0.2);
+            color: #fb923c;
+        }
+        
+        .nav-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .visualization-box {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 2rem 0;
+        }
+        
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 2rem 0;
+        }
+        
+        .flow-item {
+            flex: 1;
+            min-width: 150px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid var(--border-color);
+            transition: all 0.3s;
+        }
+        
+        .flow-item:hover {
+            border-color: var(--primary-color);
+            transform: scale(1.05);
+        }
+        
+        .flow-arrow {
+            font-size: 2rem;
+            color: var(--primary-color);
+        }
+        
+        @media (max-width: 768px) {
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+            
+            .tooltip .tooltiptext {
+                width: 250px;
+                margin-left: -125px;
+            }
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
+            border-left: 4px solid var(--primary-color);
+            padding: 20px;
+            margin: 2rem 0;
+            border-radius: 8px;
+        }
+        
+        .stat-box {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid var(--border-color);
+        }
+        
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        pre code {
+            display: block;
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-size: 0.875rem;
+            line-height: 1.7;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .section-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигационная панель -->
+    <nav class="nav-sticky">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-code text-3xl gradient-text"></i>
+                    <h1 class="text-xl font-bold">MCP | Выполнение кода</h1>
+                </div>
+                <div class="hidden md:flex gap-4">
+                    <a href="#intro" class="hover:text-primary-color transition">Введение</a>
+                    <a href="#problems" class="hover:text-primary-color transition">Проблемы</a>
+                    <a href="#solution" class="hover:text-primary-color transition">Решение</a>
+                    <a href="#benefits" class="hover:text-primary-color transition">Преимущества</a>
+                    <a href="#comparison" class="hover:text-primary-color transition">Сравнение</a>
+                </div>
+                <a href="https://www.anthropic.com/engineering/code-execution-with-mcp" target="_blank" class="bg-primary-color px-4 py-2 rounded-lg hover:bg-secondary-color transition">
+                    <i class="fas fa-external-link-alt mr-2"></i>Оригинал
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Главный контент -->
+    <main class="container mx-auto px-4 py-12 max-w-6xl">
+        
+        <!-- Заголовок -->
+        <header class="text-center mb-16" data-aos="fade-up">
+            <div class="mb-6">
+                <span class="badge badge-primary">Anthropic Engineering Blog</span>
+                <span class="badge badge-success ml-2">Перевод на русский</span>
+            </div>
+            <h1 class="text-5xl md:text-6xl font-bold mb-6 gradient-text">
+                Выполнение кода с Model Context Protocol
+            </h1>
+            <p class="text-xl text-secondary max-w-3xl mx-auto leading-relaxed">
+                Как AI-агенты могут эффективно взаимодействовать с тысячами инструментов, используя меньше токенов через выполнение кода
+            </p>
+            <div class="mt-8 flex justify-center gap-4 flex-wrap">
+                <div class="stat-box">
+                    <div class="stat-number">98.7%</div>
+                    <div class="text-sm text-secondary">Экономия токенов</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">1000+</div>
+                    <div class="text-sm text-secondary">Инструментов MCP</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">∞</div>
+                    <div class="text-sm text-secondary">Возможностей</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Рекомендация оригинала -->
+        <section id="original" class="mb-16" data-aos="fade-up">
+            <div class="highlight-box">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold">Рекомендуем оригинал</h2>
+                </div>
+                <p class="text-lg mb-4">
+                    Эта статья представляет собой <strong>подробный перевод</strong> и анализ оригинального блога Anthropic. 
+                    Мы настоятельно рекомендуем ознакомиться с <a href="https://www.anthropic.com/engineering/code-execution-with-mcp" target="_blank" class="text-primary-color hover:text-accent-color underline">оригинальной публикацией</a>.
+                </p>
+                <div class="bg-darker-bg p-4 rounded-lg mt-4">
+                    <h3 class="font-semibold mb-2"><i class="fas fa-lightbulb text-yellow-400 mr-2"></i>Почему это важно?</h3>
+                    <ul class="list-disc list-inside space-y-2 text-text-secondary">
+                        <li>Революционный подход к взаимодействию AI-агентов с инструментами</li>
+                        <li>Решение критической проблемы масштабирования агентных систем</li>
+                        <li>Открытый стандарт MCP меняет индустрию AI-разработки</li>
+                        <li>Практические примеры из реального опыта команды Anthropic</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Введение в MCP -->
+        <section id="intro" class="mb-16" data-aos="fade-up">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <h2 class="text-3xl font-bold">Что такое Model Context Protocol?</h2>
+            </div>
+            
+            <div class="card p-8 rounded-xl mb-8">
+                <p class="text-lg leading-relaxed mb-6">
+                    <span class="tooltip">Model Context Protocol (MCP)
+                        <span class="tooltiptext">
+                            <strong>MCP</strong> — открытый протокол для подключения AI-агентов к внешним системам. 
+                            Позволяет агентам взаимодействовать с любыми инструментами через единый интерфейс.
+                        </span>
+                    </span> — это открытый стандарт для подключения AI-агентов к внешним системам. 
+                    Традиционно для подключения агентов к инструментам и данным требовалась индивидуальная интеграция для каждой пары, 
+                    что создавало фрагментацию и дублирование усилий.
+                </p>
+                
+                <div class="visualization-box">
+                    <h3 class="text-xl font-semibold mb-6 text-center">Эволюция подключения агентов</h3>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="text-center">
+                            <div class="text-red-400 text-4xl mb-4">
+                                <i class="fas fa-times-circle"></i>
+                            </div>
+                            <h4 class="font-semibold mb-3 text-red-400">Без MCP</h4>
+                            <p class="text-sm text-secondary">Каждый агент требует отдельной интеграции с каждым инструментом</p>
+                            <div class="mt-4 text-xs text-secondary">
+                                N агентов × M инструментов = N×M интеграций
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-green-400 text-4xl mb-4">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <h4 class="font-semibold mb-3 text-green-400">С MCP</h4>
+                            <p class="text-sm text-secondary">Единый протокол открывает доступ ко всей экосистеме</p>
+                            <div class="mt-4 text-xs text-secondary">
+                                N агентов + M инструментов = N+M интеграций
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-darker-bg p-6 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-4">
+                        <i class="fas fa-chart-line text-primary-color mr-2"></i>
+                        Стремительное принятие MCP
+                    </h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start">
+                            <i class="fas fa-server text-primary-color mr-3 mt-1"></i>
+                            <span><strong>Тысячи MCP-серверов</strong> созданы сообществом с момента запуска в ноябре 2024</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-code text-primary-color mr-3 mt-1"></i>
+                            <span><strong>SDK доступны</strong> для всех основных языков программирования</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-industry text-primary-color mr-3 mt-1"></i>
+                            <span><strong>Индустрия приняла MCP</strong> как де-факто стандарт для подключения агентов</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Проблемы при масштабировании -->
+        <section id="problems" class="mb-16" data-aos="fade-up">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h2 class="text-3xl font-bold">Проблемы избыточного потребления токенов</h2>
+            </div>
+
+            <p class="text-lg mb-8 text-secondary">
+                По мере масштабирования использования MCP возникают два типичных паттерна, которые увеличивают стоимость и задержку агентов:
+            </p>
+
+            <!-- Проблема 1: Перегрузка контекста -->
+            <div class="card p-8 rounded-xl mb-8">
+                <h3 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                    Определения инструментов перегружают контекстное окно
+                </h3>
+                
+                <p class="text-secondary mb-6">
+                    Большинство MCP-клиентов загружают все определения инструментов заранее непосредственно в контекст, 
+                    представляя их модели через прямой синтаксис вызова инструментов.
+                </p>
+
+                <div class="code-editor">
+                    <div class="code-header">
+                        <div class="code-tabs">
+                            <div class="code-tab active">Примеры определений</div>
+                        </div>
+                        <button class="copy-btn" onclick="copyCode(this, 'tool-definitions')">
+                            <i class="fas fa-copy mr-1"></i>Копировать
+                        </button>
+                    </div>
+                    <pre><code id="tool-definitions" class="language-typescript">// Пример: Определение инструмента Google Drive
+gdrive.getDocument
+    Описание: Извлекает документ из Google Drive
+    Параметры:
+        documentId (обязательный, string): ID документа для извлечения
+        fields (опциональный, string): Конкретные поля для возврата
+    Возвращает: Объект документа с заголовком, содержимым, метаданными, правами доступа и т.д.
+
+// Пример: Определение инструмента Salesforce
+salesforce.updateRecord
+    Описание: Обновляет запись в Salesforce
+    Параметры:
+        objectType (обязательный, string): Тип объекта Salesforce (Lead, Contact, Account и т.д.)
+        recordId (обязательный, string): ID записи для обновления
+        data (обязательный, object): Поля для обновления с новыми значениями
+    Возвращает: Обновленный объект записи с подтверждением</code></pre>
+                </div>
+
+                <div class="highlight-box mt-6">
+                    <h4 class="font-semibold mb-3"><i class="fas fa-exclamation-circle text-red-400 mr-2"></i>Проблема</h4>
+                    <p class="text-secondary">
+                        Описания инструментов занимают больше места в контекстном окне, увеличивая время отклика и затраты. 
+                        В случаях, когда агенты подключены к <strong>тысячам инструментов</strong>, им нужно обработать 
+                        <strong>сотни тысяч токенов</strong> еще до чтения запроса.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Проблема 2: Промежуточные результаты -->
+            <div class="card p-8 rounded-xl mb-8">
+                <h3 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                    Промежуточные результаты инструментов потребляют дополнительные токены
+                </h3>
+                
+                <p class="text-secondary mb-6">
+                    Большинство MCP-клиентов позволяют моделям напрямую вызывать MCP-инструменты. 
+                    Например, запрос: <em>"Загрузи транскрипт моей встречи из Google Drive и прикрепи его к лиду в Salesforce"</em>
+                </p>
+
+                <div class="code-editor">
+                    <div class="code-header">
+                        <div class="code-tabs">
+                            <div class="code-tab active">Поток вызовов</div>
+                        </div>
+                        <button class="copy-btn" onclick="copyCode(this, 'tool-calls-flow')">
+                            <i class="fas fa-copy mr-1"></i>Копировать
+                        </button>
+                    </div>
+                    <pre><code id="tool-calls-flow" class="language-typescript">// Модель делает вызовы:
+
+// Шаг 1: Получить документ
+ВЫЗОВ ИНСТРУМЕНТА: gdrive.getDocument(documentId: "abc123")
+    возвращает "Обсуждали цели Q4...\n[полный текст транскрипта]"
+    (загружается в контекст модели)
+
+// Шаг 2: Обновить запись (транскрипт проходит через контекст СНОВА)
+ВЫЗОВ ИНСТРУМЕНТА: salesforce.updateRecord(
+    objectType: "SalesMeeting",
+    recordId: "00Q5f000001abcXYZ",
+    data: { 
+        "Notes": "Обсуждали цели Q4...\n[полный текст транскрипта снова]" 
+    }
+)
+(модель должна записать весь транскрипт в контекст еще раз)</code></pre>
+                </div>
+
+                <div class="highlight-box mt-6">
+                    <h4 class="font-semibold mb-3"><i class="fas fa-exclamation-circle text-red-400 mr-2"></i>Проблема</h4>
+                    <div class="text-secondary space-y-3">
+                        <p>
+                            Каждый промежуточный результат должен проходить через модель. В этом примере полный транскрипт встречи проходит через контекст <strong>дважды</strong>.
+                        </p>
+                        <p>
+                            Для 2-часовой встречи это может означать обработку дополнительных <strong>50,000 токенов</strong>. 
+                            Еще большие документы могут превысить лимиты контекстного окна, нарушая рабочий процесс.
+                        </p>
+                        <p class="font-semibold text-yellow-400">
+                            <i class="fas fa-bug mr-2"></i>
+                            При работе с большими документами или сложными структурами данных модели чаще допускают ошибки при копировании данных между вызовами инструментов.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Визуализация традиционного подхода -->
+            <div class="visualization-box" data-aos="fade-up">
+                <h3 class="text-xl font-semibold mb-6 text-center">
+                    <i class="fas fa-project-diagram mr-2"></i>
+                    Традиционный поток работы MCP-клиента
+                </h3>
+                <div class="flow-diagram">
+                    <div class="flow-item">
+                        <i class="fas fa-server text-4xl text-blue-400 mb-3"></i>
+                        <h4 class="font-semibold mb-2">MCP Сервер</h4>
+                        <p class="text-sm text-secondary">Предоставляет инструменты</p>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-item">
+                        <i class="fas fa-desktop text-4xl text-purple-400 mb-3"></i>
+                        <h4 class="font-semibold mb-2">MCP Клиент</h4>
+                        <p class="text-sm text-secondary">Загружает все определения</p>
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-item">
+                        <i class="fas fa-brain text-4xl text-pink-400 mb-3"></i>
+                        <h4 class="font-semibold mb-2">LLM</h4>
+                        <p class="text-sm text-secondary">Обрабатывает все через контекст</p>
+                    </div>
+                </div>
+                <div class="mt-6 text-center text-sm text-red-400">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Все определения инструментов и промежуточные результаты проходят через контекстное окно модели
+                </div>
+            </div>
+        </section>
+
+        <!-- Решение: Выполнение кода -->
+        <section id="solution" class="mb-16" data-aos="fade-up">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <h2 class="text-3xl font-bold">Решение: Выполнение кода с MCP</h2>
+            </div>
+
+            <div class="card p-8 rounded-xl mb-8">
+                <p class="text-lg leading-relaxed mb-6">
+                    С учетом того, что среды выполнения кода становятся все более распространенными для агентов, 
+                    решением является представление MCP-серверов как <strong>API-кодов</strong>, а не прямых вызовов инструментов. 
+                    Агент может затем писать код для взаимодействия с MCP-серверами.
+                </p>
+
+                <div class="highlight-box">
+                    <h4 class="font-semibold mb-3"><i class="fas fa-check-circle text-green-400 mr-2"></i>Ключевые преимущества</h4>
+                    <ul class="space-y-2 text-secondary">
+                        <li><i class="fas fa-angle-right text-primary-color mr-2"></i>Агенты загружают только нужные инструменты</li>
+                        <li><i class="fas fa-angle-right text-primary-color mr-2"></i>Данные обрабатываются в среде выполнения перед передачей модели</li>
+                        <li><i class="fas fa-angle-right text-primary-color mr-2"></i>Сокращение использования токенов на 98.7%</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Структура файлового дерева -->
+            <div class="card p-8 rounded-xl mb-8">
+                <h3 class="text-2xl font-bold mb-6">Подход с файловым деревом</h3>
+                <p class="text-secondary mb-6">
+                    Один из способов реализации — генерация файлового дерева всех доступных инструментов из подключенных MCP-серверов:
+                </p>
+
+                <div class="code-editor">
+                    <div class="code-header">
+                        <div class="code-tabs">
+                            <div class="code-tab active">Структура</div>
+                        </div>
+                        <button class="copy-btn" onclick="copyCode(this, 'file-tree')">
+                            <i class="fas fa-copy mr-1"></i>Копировать
+                        </button>
+                    </div>
+                    <pre><code id="file-tree" class="language-typescript">servers/
+├── google-drive/
+│   ├── getDocument.ts
+│   ├── ... (другие инструменты)
+│   └── index.ts
+├── salesforce/
+│   ├── updateRecord.ts
+│   ├── ... (другие инструменты)
+│   └── index.ts
+└── ... (другие серверы)</code></pre>
+                </div>
+
+                <p class="text-secondary mt-6 mb-6">
+                    Каждый инструмент соответствует файлу с типизированным интерфейсом:
+                </p>
+
+                <div class="code-editor">
+                    <div class="code-header">
+                        <div class="code-tabs">
+                            <div class="code-tab active">getDocument.ts</div>
+                        </div>
+                        <button class="copy-btn" onclick="copyCode(this, 'tool-file')">
+                            <i class="fas fa-copy mr-1"></i>Копировать
+                        </button>
+                    </div>
+                    <pre><code id="tool-file" class="language-typescript">// ./servers/google-drive/getDocument.ts
+import { callMCPTool } from "../../../client.js";
+
+interface GetDocumentInput {
+  documentId: string;
+}
+
+interface GetDocumentResponse {
+  content: string;
+}
+
+/* Читает документ из Google Drive */
+export async function getDocument(
+  input: GetDocumentInput
+): Promise<GetDocumentResponse> {
+  return callMCPTool<GetDocumentResponse>(
+    'google_drive__get_document', 
+    input
+  );
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- Пример использования -->
+            <div class="card p-8 rounded-xl mb-8">
+                <h3 class="text-2xl font-bold mb-6">Пример: Google Drive → Salesforce</h3>
+                <p class="text-secondary mb-6">
+                    Теперь наш пример "Google Drive → Salesforce" становится простым кодом:
+                </p>
+
+                <div class="code-editor">
+                    <div class="code-header">
+                        <div class="code-tabs">
+                            <div class="code-tab active">С выполнением кода</div>
+                        </div>
+                        <button class="copy-btn" onclick="copyCode(this, 'code-example')">
+                            <i class="fas fa-copy mr-1"></i>Копировать
+                        </button>
+                    </div>
+                    <pre><code id="code-example" class="language-typescript">// Читаем транскрипт из Google Docs и добавляем в Salesforce
+import * as gdrive from './servers/google-drive';
+import * as salesforce from './servers/salesforce';
+
+// Получаем транскрипт (данные остаются в среде выполнения)
+const transcript = (
+  await gdrive.getDocument({ documentId: 'abc123' })
+).content;
+
+// Обновляем Salesforce (транскрипт проходит через контекст только раз)
+await salesforce.updateRecord({
+  objectType: 'SalesMeeting',
+  recordId: '00Q5f000001abcXYZ',
+  data: { Notes: transcript }
+});</code></pre>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6 mt-8">
+                    <div class="bg-red-900 bg-opacity-20 p-6 rounded-lg border border-red-500">
+                        <h4 class="font-semibold mb-3 text-red-400">
+                            <i class="fas fa-times-circle mr-2"></i>Без выполнения кода
+                        </h4>
+                        <div class="text-sm text-secondary space-y-2">
+                            <p><strong>Токенов:</strong> ~150,000</p>
+                            <p><strong>Транскрипт проходит:</strong> 2 раза через контекст</p>
+                            <p><strong>Определений загружено:</strong> Все (~1000 инструментов)</p>
+                        </div>
+                    </div>
+                    <div class="bg-green-900 bg-opacity-20 p-6 rounded-lg border border-green-500">
+                        <h4 class="font-semibold mb-3 text-green-400">
+                            <i class="fas fa-check-circle mr-2"></i>С выполнением кода
+                        </h4>
+                        <div class="text-sm text-secondary space-y-2">
+                            <p><strong>Токенов:</strong> ~2,000</p>
+                            <p><strong>Транскрипт проходит:</strong> 0 раз (в среде выполнения)</p>
+                            <p><strong>Определений загружено:</strong> Только нужные (2 инструмента)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="highlight-box mt-6">
+                    <h4 class="text-xl font-semibold mb-3 text-green-400">
+                        <i class="fas fa-trophy mr-2"></i>
+                        Экономия: 98.7% токенов
+                    </h4>
+                    <p class="text-secondary">
+                        Агент обнаруживает инструменты, исследуя файловую систему: перечисляет директорию <code>./servers/</code>, 
+                        находит доступные серверы (например, <code>google-drive</code> и <code>salesforce</code>), 
+                        затем читает конкретные файлы инструментов, которые ему нужны.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Ссылка на Cloudflare -->
+            <div class="bg-darker-bg p-6 rounded-lg">
+                <p class="text-secondary">
+                    <i class="fas fa-link text-primary-color mr-2"></i>
+                    Cloudflare опубликовала <a href="https://blog.cloudflare.com/code-mode/" target="_blank" class="text-primary-color hover:text-accent-color underline">аналогичные выводы</a>, 
+                    называя выполнение кода с MCP <strong>"Code Mode"</strong>. Основная идея та же: 
+                    LLM отлично справляются с написанием кода, и разработчики должны использовать это преимущество 
+                    для создания агентов, которые взаимодействуют с MCP-серверами более эффективно.
+                </p>
+            </div>
+        </section>
+
+        <!-- Преимущества -->
+        <section id="benefits" class="mb-16" data-aos="fade-up">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-star"></i>
+                </div>
+                <h2 class="text-3xl font-bold">Преимущества выполнения кода с MCP</h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6 mb-8">
+                <!-- Прогрессивное раскрытие -->
+                <div class="card p-6 rounded-xl">
+                    <div class="text-4xl mb-4 text-primary-color">
+                        <i class="fas fa-folder-tree"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Прогрессивное раскрытие</h3>
+                    <p class="text-secondary mb-4">
+                        Модели отлично справляются с навигацией по файловым системам. Представление инструментов как кода 
+                        позволяет моделям читать определения инструментов по требованию.
+                    </p>
+                    <div class="code-editor">
+                        <pre><code class="language-typescript">// Поиск инструментов
+const tools = await searchTools({
+  query: "salesforce",
+  detail: "name_and_description"
+});
+
+// Загрузка только нужных
+import * as salesforce from './servers/salesforce';</code></pre>
+                    </div>
+                </div>
+
+                <!-- Эффективные результаты -->
+                <div class="card p-6 rounded-xl">
+                    <div class="text-4xl mb-4 text-primary-color">
+                        <i class="fas fa-filter"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Контекстно-эффективные результаты</h3>
+                    <p class="text-secondary mb-4">
+                        При работе с большими наборами данных агенты могут фильтровать и преобразовывать результаты в коде перед возвратом.
+                    </p>
+                    <div class="code-editor">
+                        <pre><code class="language-typescript">// Фильтрация в среде выполнения
+const allRows = await gdrive.getSheet({ 
+  sheetId: 'abc123' 
+});
+const pending = allRows.filter(
+  row => row["Status"] === 'pending'
+);
+console.log(`Найдено ${pending.length} заказов`);</code></pre>
+                    </div>
+                </div>
+
+                <!-- Управление потоком -->
+                <div class="card p-6 rounded-xl">
+                    <div class="text-4xl mb-4 text-primary-color">
+                        <i class="fas fa-code-branch"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Мощное управление потоком</h3>
+                    <p class="text-secondary mb-4">
+                        Циклы, условия и обработка ошибок выполняются с помощью привычных паттернов кода.
+                    </p>
+                    <div class="code-editor">
+                        <pre><code class="language-typescript">// Ожидание события с циклом
+let found = false;
+while (!found) {
+  const messages = await slack.getChannelHistory({ 
+    channel: 'C123456' 
+  });
+  found = messages.some(
+    m => m.text.includes('deployment complete')
+  );
+  if (!found) await sleep(5000);
+}</code></pre>
+                    </div>
+                </div>
+
+                <!-- Приватность -->
+                <div class="card p-6 rounded-xl">
+                    <div class="text-4xl mb-4 text-primary-color">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Операции с сохранением приватности</h3>
+                    <p class="text-secondary mb-4">
+                        Промежуточные результаты остаются в среде выполнения. Агент видит только то, что вы явно логируете.
+                    </p>
+                    <div class="code-editor">
+                        <pre><code class="language-typescript">// PII токенизируется автоматически
+const sheet = await gdrive.getSheet({ 
+  sheetId: 'abc123' 
+});
+for (const row of sheet.rows) {
+  await salesforce.updateRecord({
+    data: { 
+      Email: row.email,  // [EMAIL_1] в модели
+      Phone: row.phone   // [PHONE_1] в модели
+    }
+  });
+}</code></pre>
+                    </div>
+                </div>
+
+                <!-- Персистентность состояния -->
+                <div class="card p-6 rounded-xl">
+                    <div class="text-4xl mb-4 text-primary-color">
+                        <i class="fas fa-save"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Персистентность состояния и навыки</h3>
+                    <p class="text-secondary mb-4">
+                        Выполнение кода с доступом к файловой системе позволяет агентам сохранять состояние между операциями.
+                    </p>
+                    <div class="code-editor">
+                        <pre><code class="language-typescript">// Сохранение промежуточных результатов
+const leads = await salesforce.query({ 
+  query: 'SELECT Id, Email FROM Lead' 
+});
+await fs.writeFile(
+  './workspace/leads.csv', 
+  leads.map(l => `${l.Id},${l.Email}`).join('\n')
+);
+
+// Сохранение навыков для переиспользования
+// В ./skills/save-sheet-as-csv.ts
+export async function saveSheetAsCsv(id) { ... }</code></pre>
+                    </div>
+                </div>
+
+                <!-- Компромиссы -->
+                <div class="card p-6 rounded-xl">
+                    <div class="text-4xl mb-4 text-yellow-400">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Важные компромиссы</h3>
+                    <p class="text-secondary mb-4">
+                        Выполнение кода добавляет собственную сложность, которую следует учитывать.
+                    </p>
+                    <ul class="text-sm text-secondary space-y-2">
+                        <li><i class="fas fa-shield-alt text-yellow-400 mr-2"></i>Требуется безопасная среда с песочницей</li>
+                        <li><i class="fas fa-memory text-yellow-400 mr-2"></i>Необходимы ограничения ресурсов</li>
+                        <li><i class="fas fa-chart-line text-yellow-400 mr-2"></i>Требуется мониторинг выполнения</li>
+                        <li><i class="fas fa-cogs text-yellow-400 mr-2"></i>Дополнительные операционные затраты</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <h4 class="font-semibold mb-3">
+                    <i class="fas fa-lightbulb text-yellow-400 mr-2"></i>
+                    Ключевой вывод
+                </h4>
+                <p class="text-lg text-secondary">
+                    Преимущества выполнения кода — <strong>снижение затрат на токены</strong>, 
+                    <strong>меньшая задержка</strong> и <strong>улучшенная композиция инструментов</strong> — 
+                    следует взвешивать относительно затрат на реализацию.
+                </p>
+            </div>
+        </section>
+
+        <!-- Таблица сравнения -->
+        <section id="comparison" class="mb-16" data-aos="fade-up">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+                <h2 class="text-3xl font-bold">Сравнение подходов: Anthropic MCP vs Cloudflare Code Mode</h2>
+            </div>
+
+            <div class="card p-8 rounded-xl overflow-x-auto">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th class="rounded-tl-lg">Характеристика</th>
+                            <th>Anthropic MCP с выполнением кода</th>
+                            <th class="rounded-tr-lg">Cloudflare Code Mode</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Основная концепция</strong></td>
+                            <td>Универсальный протокол для подключения агентов к инструментам через открытый стандарт</td>
+                            <td>Режим работы агентов, где код становится основным интерфейсом взаимодействия</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Представление инструментов</strong></td>
+                            <td>Файловое дерево с TypeScript-модулями для каждого инструмента</td>
+                            <td>API-интерфейсы, доступные через код в среде выполнения Workers</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Загрузка определений</strong></td>
+                            <td>
+                                <span class="badge badge-success">Прогрессивная</span>
+                                <br><span class="text-sm text-secondary">Агент читает только нужные инструменты из файловой системы</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-success">По требованию</span>
+                                <br><span class="text-sm text-secondary">Загружаются при обращении к API</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Обработка данных</strong></td>
+                            <td>В песочнице выполнения кода, промежуточные результаты не проходят через модель</td>
+                            <td>В среде Cloudflare Workers, данные обрабатываются на edge</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Экономия токенов</strong></td>
+                            <td>
+                                <span class="badge badge-primary">До 98.7%</span>
+                                <br><span class="text-sm text-secondary">150,000 → 2,000 токенов в примере</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-primary">Сопоставимо</span>
+                                <br><span class="text-sm text-secondary">Аналогичные показатели экономии</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Среда выполнения</strong></td>
+                            <td>Требуется безопасная песочница с изоляцией процессов</td>
+                            <td>Cloudflare Workers (V8 Isolates) с встроенной изоляцией</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Персистентность</strong></td>
+                            <td>
+                                <span class="badge badge-success">Файловая система</span>
+                                <br><span class="text-sm text-secondary">Сохранение состояния и навыков в файлах</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-success">Durable Objects / KV</span>
+                                <br><span class="text-sm text-secondary">Распределенное хранилище состояния</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Приватность данных</strong></td>
+                            <td>
+                                <span class="badge badge-success">Токенизация PII</span>
+                                <br><span class="text-sm text-secondary">Автоматическая замена чувствительных данных токенами</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-success">Edge изоляция</span>
+                                <br><span class="text-sm text-secondary">Данные остаются на edge, не проходят через модель</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Поиск инструментов</strong></td>
+                            <td>
+                                <code>searchTools()</code> с параметром уровня детализации
+                            </td>
+                            <td>Навигация по доступным API через документацию</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Управление потоком</strong></td>
+                            <td>
+                                <span class="badge badge-primary">Полный контроль</span>
+                                <br><span class="text-sm text-secondary">Циклы, условия, async/await в TypeScript</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-primary">Полный контроль</span>
+                                <br><span class="text-sm text-secondary">JavaScript/TypeScript в Workers</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Экосистема</strong></td>
+                            <td>
+                                <span class="badge badge-success">Открытая</span>
+                                <br><span class="text-sm text-secondary">Тысячи MCP-серверов, SDK для всех языков</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-warning">Платформенная</span>
+                                <br><span class="text-sm text-secondary">Интеграция с экосистемой Cloudflare</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Развертывание</strong></td>
+                            <td>Гибкое: локально, облако, on-premise</td>
+                            <td>Cloudflare Workers (edge computing)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Навыки (Skills)</strong></td>
+                            <td>
+                                <span class="badge badge-success">Встроенные</span>
+                                <br><span class="text-sm text-secondary">Сохранение функций с SKILL.md для переиспользования</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-warning">Ручные</span>
+                                <br><span class="text-sm text-secondary">Требуется самостоятельная организация</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Масштабируемость</strong></td>
+                            <td>Зависит от инфраструктуры песочницы</td>
+                            <td>
+                                <span class="badge badge-success">Глобальная</span>
+                                <br><span class="text-sm text-secondary">Автоматическое масштабирование на edge</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Стоимость</strong></td>
+                            <td>Инфраструктура песочницы + вызовы модели (значительно снижены)</td>
+                            <td>Cloudflare Workers pricing + вызовы модели</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Сложность реализации</strong></td>
+                            <td>
+                                <span class="badge badge-warning">Средняя-высокая</span>
+                                <br><span class="text-sm text-secondary">Требуется настройка песочницы, безопасности, мониторинга</span>
+                            </td>
+                            <td>
+                                <span class="badge badge-success">Средняя</span>
+                                <br><span class="text-sm text-secondary">Использует существующую платформу Workers</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Лучше для</strong></td>
+                            <td>Максимальная гибкость, разнообразие инструментов, открытая экосистема</td>
+                            <td>Edge-приложения, глобальная латентность, интеграция с Cloudflare</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-8 grid md:grid-cols-2 gap-6">
+                <div class="highlight-box">
+                    <h4 class="font-semibold mb-3 text-green-400">
+                        <i class="fas fa-check-double mr-2"></i>
+                        Общие преимущества обоих подходов
+                    </h4>
+                    <ul class="text-sm text-secondary space-y-2">
+                        <li><i class="fas fa-check text-green-400 mr-2"></i>Радикальное снижение потребления токенов</li>
+                        <li><i class="fas fa-check text-green-400 mr-2"></i>Уменьшение латентности и стоимости</li>
+                        <li><i class="fas fa-check text-green-400 mr-2"></i>Обработка данных в среде выполнения</li>
+                        <li><i class="fas fa-check text-green-400 mr-2"></i>Мощное управление потоком через код</li>
+                        <li><i class="fas fa-check text-green-400 mr-2"></i>Улучшенная композиция инструментов</li>
+                    </ul>
+                </div>
+                <div class="highlight-box">
+                    <h4 class="font-semibold mb-3 text-blue-400">
+                        <i class="fas fa-arrows-alt-h mr-2"></i>
+                        Ключевые различия
+                    </h4>
+                    <ul class="text-sm text-secondary space-y-2">
+                        <li><i class="fas fa-angle-right text-primary-color mr-2"></i><strong>MCP:</strong> Открытый протокол, независим от платформы</li>
+                        <li><i class="fas fa-angle-right text-primary-color mr-2"></i><strong>Code Mode:</strong> Специфичен для Cloudflare Workers</li>
+                        <li><i class="fas fa-angle-right text-primary-color mr-2"></i><strong>MCP:</strong> Файловая система для навыков</li>
+                        <li><i class="fas fa-angle-right text-primary-color mr-2"></i><strong>Code Mode:</strong> Edge-native хранилище</li>
+                        <li><i class="fas fa-angle-right text-primary-color mr-2"></i><strong>MCP:</strong> Тысячи существующих серверов</li>
+                        <li><i class="fas fa-angle-right text-primary-color mr-2"></i><strong>Code Mode:</strong> Глобальное развертывание на edge</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Заключение -->
+        <section id="summary" class="mb-16" data-aos="fade-up">
+            <div class="section-header">
+                <div class="section-icon">
+                    <i class="fas fa-flag-checkered"></i>
+                </div>
+                <h2 class="text-3xl font-bold">Заключение</h2>
+            </div>
+
+            <div class="card p-8 rounded-xl mb-8">
+                <p class="text-lg leading-relaxed mb-6">
+                    MCP предоставляет фундаментальный протокол для подключения агентов ко множеству инструментов и систем. 
+                    Однако, когда подключено слишком много серверов, определения инструментов и результаты могут потреблять 
+                    чрезмерное количество токенов, снижая эффективность агентов.
+                </p>
+
+                <div class="highlight-box mb-6">
+                    <h4 class="font-semibold mb-3">
+                        <i class="fas fa-graduation-cap text-primary-color mr-2"></i>
+                        Применение проверенных паттернов
+                    </h4>
+                    <p class="text-secondary mb-4">
+                        Хотя многие проблемы здесь кажутся новыми — управление контекстом, композиция инструментов, 
+                        персистентность состояния — у них есть известные решения из разработки программного обеспечения.
+                    </p>
+                    <p class="text-secondary">
+                        <strong>Выполнение кода</strong> применяет эти устоявшиеся паттерны к агентам, позволяя им использовать 
+                        привычные конструкции программирования для более эффективного взаимодействия с MCP-серверами.
+                    </p>
+                </div>
+
+                <div class="bg-darker-bg p-6 rounded-lg">
+                    <h4 class="font-semibold mb-4 text-xl">
+                        <i class="fas fa-users text-primary-color mr-2"></i>
+                        Присоединяйтесь к сообществу
+                    </h4>
+                    <p class="text-secondary mb-4">
+                        Если вы реализуете этот подход, мы призываем вас делиться своими находками с 
+                        <a href="https://modelcontextprotocol.io/community/communication" target="_blank" class="text-primary-color hover:text-accent-color underline">сообществом MCP</a>.
+                    </p>
+                    <div class="flex gap-4 flex-wrap">
+                        <a href="https://modelcontextprotocol.io/" target="_blank" class="bg-primary-color px-6 py-3 rounded-lg hover:bg-secondary-color transition inline-flex items-center">
+                            <i class="fas fa-external-link-alt mr-2"></i>
+                            Официальный сайт MCP
+                        </a>
+                        <a href="https://github.com/modelcontextprotocol/servers" target="_blank" class="bg-gray-700 px-6 py-3 rounded-lg hover:bg-gray-600 transition inline-flex items-center">
+                            <i class="fab fa-github mr-2"></i>
+                            GitHub репозиторий
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-8 rounded-xl">
+                <h3 class="text-2xl font-bold mb-4">Благодарности</h3>
+                <p class="text-secondary italic">
+                    <i class="fas fa-pen-fancy mr-2"></i>
+                    Оригинальная статья написана Adam Jones и Conor Kelly. 
+                    Благодарности Jeremy Fox, Jerome Swannack, Stuart Ritchie, Molly Vorwerck, Matt Samuels и Maggie Vo 
+                    за обратную связь по черновикам статьи.
+                </p>
+                <hr class="my-6 border-border-color">
+                <p class="text-sm text-secondary">
+                    <i class="fas fa-language mr-2"></i>
+                    Перевод на русский язык выполнен для образовательных целей. 
+                    Все права на оригинальный материал принадлежат Anthropic.
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Футер -->
+    <footer class="bg-darker-bg border-t border-border-color py-8 mt-16">
+        <div class="container mx-auto px-4 text-center">
+            <div class="mb-6 flex justify-center gap-6">
+                <a href="https://www.anthropic.com" target="_blank" class="text-text-secondary hover:text-primary-color transition">
+                    <i class="fas fa-building text-2xl"></i>
+                </a>
+                <a href="https://github.com/modelcontextprotocol" target="_blank" class="text-text-secondary hover:text-primary-color transition">
+                    <i class="fab fa-github text-2xl"></i>
+                </a>
+                <a href="https://modelcontextprotocol.io" target="_blank" class="text-text-secondary hover:text-primary-color transition">
+                    <i class="fas fa-globe text-2xl"></i>
+                </a>
+            </div>
+            <p class="text-text-secondary mb-2">
+                Образовательный проект на основе материалов Anthropic
+            </p>
+            <p class="text-sm text-gray-500">
+                Создано с использованием современных веб-технологий для GitHub Pages
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Инициализация AOS (анимации при прокрутке)
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 100
+        });
+
+        // Инициализация подсветки синтаксиса
+        document.addEventListener('DOMContentLoaded', (event) => {
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightBlock(block);
+            });
+        });
+
+        // Функция копирования кода
+        function copyCode(button, codeId) {
+            const codeBlock = document.getElementById(codeId);
+            const code = codeBlock.textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check mr-1"></i>Скопировано!';
+                button.style.background = '#22c55e';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = '';
+                }, 2000);
+            });
+        }
+
+        // Плавная прокрутка для якорных ссылок
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Переключение вкладок кода (для будущих интерактивных примеров)
+        function switchTab(button, tabContent) {
+            // Убираем active класс со всех вкладок в группе
+            const tabGroup = button.closest('.code-tabs');
+            tabGroup.querySelectorAll('.code-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Добавляем active класс к нажатой вкладке
+            button.classList.add('active');
+            
+            // Логика переключения контента (для будущей реализации)
+            console.log('Switched to tab:', tabContent);
+        }
+
+        // Отслеживание прокрутки для активации навигации
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('nav a[href^="#"]');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-primary-color');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('text-primary-color');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
