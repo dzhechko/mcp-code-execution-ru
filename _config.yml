@@ -8,8 +8,8 @@ author: "MCP Russia Community"
 lang: ru
 locale: ru_RU
 
-# URL настройки (замените YOUR_USERNAME на ваше имя пользователя GitHub)
-url: "https://YOUR_USERNAME.github.io"
+# URL настройки (замените dzhechko на ваше имя пользователя GitHub)
+url: "https://dzhechko.github.io"
 baseurl: "/mcp-code-execution-ru"
 
 # Тема (для простоты используем null, так как у нас кастомный дизайн)
